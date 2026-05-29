@@ -18,7 +18,8 @@ public class UploadService {
 
     private final DocumentRepository documentRepository;
 
-    private static final String UPLOAD_DIR = "uploads/";
+    private static final String UPLOAD_DIR =
+        "documentmanager/uploads/";
 
     public Document uploadFile(MultipartFile file) throws IOException {
 
@@ -65,4 +66,10 @@ public class UploadService {
     public List<Document> getAllFiles() {
         return documentRepository.findAll();
     }
+    public Document getFileById(Long id) {
+
+    return documentRepository.findById(id)
+            .orElseThrow(() ->
+                    new RuntimeException("File not found"));
+}
 }

@@ -6,7 +6,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -47,4 +53,33 @@ public class UploadController {
                 uploadService.getAllFiles()
         );
     }
+@GetMapping("/download/{id}")
+public ResponseEntity<Resource> downloadFile(
+        @PathVariable Long id
+) throws Exception {
+
+    Document document =
+            uploadService.getFileById(id);
+
+    Path path =
+            Paths.get(document.getFilePath())
+                    .toAbsolutePath();
+
+    Resource resource =
+            new UrlResource(path.toUri());
+
+    if (!resource.exists()) {
+        throw new RuntimeException(
+                "File not found: " + path
+        );
+    }
+
+    return ResponseEntity.ok()
+            .header(
+                    HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" +
+                            document.getFileName() + "\""
+            )
+            .body(resource);
+}
 }
