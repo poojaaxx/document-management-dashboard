@@ -24,6 +24,7 @@ public class UploadService {
     private static final String UPLOAD_DIR =
             "documentmanager/uploads/";
 
+    // Upload single file
     public Document uploadFile(MultipartFile file) throws IOException {
 
         // Validate PDF
@@ -63,14 +64,15 @@ public class UploadService {
                 .build();
 
         Document savedDocument =
-        documentRepository.save(document);
+                documentRepository.save(document);
 
-notificationService.createNotification(
-        "File uploaded: " + file.getOriginalFilename(),
-        "UPLOAD"
-);
+        // Create upload notification
+        notificationService.createNotification(
+                "File uploaded: " + file.getOriginalFilename(),
+                "UPLOAD"
+        );
 
-return savedDocument;
+        return savedDocument;
     }
 
     // Upload multiple files
@@ -85,6 +87,15 @@ return savedDocument;
 
             uploadedFiles.add(
                     uploadFile(file)
+            );
+        }
+
+        // Create bulk upload notification
+        if (files.length > 1) {
+
+            notificationService.createNotification(
+                    files.length + " files uploaded successfully",
+                    "BULK_UPLOAD"
             );
         }
 
