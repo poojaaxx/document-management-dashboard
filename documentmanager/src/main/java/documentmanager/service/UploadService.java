@@ -62,7 +62,15 @@ public class UploadService {
                 .uploadDate(LocalDateTime.now())
                 .build();
 
-        return documentRepository.save(document);
+        Document savedDocument =
+        documentRepository.save(document);
+
+notificationService.createNotification(
+        "File uploaded: " + file.getOriginalFilename(),
+        "UPLOAD"
+);
+
+return savedDocument;
     }
 
     // Upload multiple files
