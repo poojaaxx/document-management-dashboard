@@ -3,14 +3,13 @@ package documentmanager.controller;
 import documentmanager.entity.Document;
 import documentmanager.service.UploadService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
-
-import java.net.MalformedURLException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -23,6 +22,7 @@ public class UploadController {
 
     private final UploadService uploadService;
 
+    // Upload single file
     @PostMapping(
             value = "/upload",
             consumes = {"multipart/form-data"}
@@ -45,6 +45,29 @@ public class UploadController {
         }
     }
 
+    // Upload multiple files
+    @PostMapping(
+            value = "/upload-multiple",
+            consumes = {"multipart/form-data"}
+    )
+    public ResponseEntity<?> uploadMultipleFiles(
+           @Parameter(description = "PDF files")
+@RequestParam("files") MultipartFile[] files
+    ) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    uploadService.uploadFiles(files)
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
+        }
+    }
+
     // Get all uploaded documents
     @GetMapping
     public ResponseEntity<List<Document>> getAllFiles() {
@@ -53,33 +76,35 @@ public class UploadController {
                 uploadService.getAllFiles()
         );
     }
-@GetMapping("/download/{id}")
-public ResponseEntity<Resource> downloadFile(
-        @PathVariable Long id
-) throws Exception {
 
-    Document document =
-            uploadService.getFileById(id);
+    // Download file by id
+    @GetMapping("/download/{id}")
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable Long id
+    ) throws Exception {
 
-    Path path =
-            Paths.get(document.getFilePath())
-                    .toAbsolutePath();
+        Document document =
+                uploadService.getFileById(id);
 
-    Resource resource =
-            new UrlResource(path.toUri());
+        Path path =
+                Paths.get(document.getFilePath())
+                        .toAbsolutePath();
 
-    if (!resource.exists()) {
-        throw new RuntimeException(
-                "File not found: " + path
-        );
+        Resource resource =
+                new UrlResource(path.toUri());
+
+        if (!resource.exists()) {
+            throw new RuntimeException(
+                    "File not found: " + path
+            );
+        }
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" +
+                                document.getFileName() + "\""
+                )
+                .body(resource);
     }
-
-    return ResponseEntity.ok()
-            .header(
-                    HttpHeaders.CONTENT_DISPOSITION,
-                    "attachment; filename=\"" +
-                            document.getFileName() + "\""
-            )
-            .body(resource);
-}
 }

@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,8 +19,10 @@ public class UploadService {
 
     private final DocumentRepository documentRepository;
 
+    private final NotificationService notificationService;
+
     private static final String UPLOAD_DIR =
-        "documentmanager/uploads/";
+            "documentmanager/uploads/";
 
     public Document uploadFile(MultipartFile file) throws IOException {
 
@@ -62,14 +65,34 @@ public class UploadService {
         return documentRepository.save(document);
     }
 
+    // Upload multiple files
+    public List<Document> uploadFiles(
+            MultipartFile[] files
+    ) throws IOException {
+
+        List<Document> uploadedFiles =
+                new ArrayList<>();
+
+        for (MultipartFile file : files) {
+
+            uploadedFiles.add(
+                    uploadFile(file)
+            );
+        }
+
+        return uploadedFiles;
+    }
+
     // Get all uploaded files
     public List<Document> getAllFiles() {
         return documentRepository.findAll();
     }
+
+    // Get file by ID
     public Document getFileById(Long id) {
 
-    return documentRepository.findById(id)
-            .orElseThrow(() ->
-                    new RuntimeException("File not found"));
-}
+        return documentRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("File not found"));
+    }
 }
