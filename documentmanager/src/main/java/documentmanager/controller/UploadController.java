@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Parameter;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -28,7 +29,8 @@ public class UploadController {
             consumes = {"multipart/form-data"}
     )
     public ResponseEntity<?> uploadFile(
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file")
+            MultipartFile file
     ) {
 
         try {
@@ -51,8 +53,9 @@ public class UploadController {
             consumes = {"multipart/form-data"}
     )
     public ResponseEntity<?> uploadMultipleFiles(
-           @Parameter(description = "PDF files")
-@RequestParam("files") MultipartFile[] files
+            @Parameter(description = "PDF files")
+            @RequestParam("files")
+            MultipartFile[] files
     ) {
 
         try {
@@ -70,16 +73,18 @@ public class UploadController {
 
     // Get all uploaded documents
     @GetMapping
-    public ResponseEntity<List<Document>> getAllFiles() {
+    public ResponseEntity<List<Document>>
+    getAllFiles() {
 
         return ResponseEntity.ok(
                 uploadService.getAllFiles()
         );
     }
 
-    // Download file by id
+    // Download file
     @GetMapping("/download/{id}")
-    public ResponseEntity<Resource> downloadFile(
+    public ResponseEntity<Resource>
+    downloadFile(
             @PathVariable Long id
     ) throws Exception {
 
@@ -87,13 +92,15 @@ public class UploadController {
                 uploadService.getFileById(id);
 
         Path path =
-                Paths.get(document.getFilePath())
-                        .toAbsolutePath();
+                Paths.get(
+                        document.getFilePath()
+                ).toAbsolutePath();
 
         Resource resource =
                 new UrlResource(path.toUri());
 
         if (!resource.exists()) {
+
             throw new RuntimeException(
                     "File not found: " + path
             );
@@ -103,8 +110,31 @@ public class UploadController {
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" +
-                                document.getFileName() + "\""
+                                document.getFileName()
+                                + "\""
                 )
                 .body(resource);
+    }
+
+    // Delete file
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String>
+    deleteFile(
+            @PathVariable Long id
+    ) {
+
+        try {
+
+            uploadService.deleteFile(id);
+
+            return ResponseEntity.ok(
+                    "File deleted successfully"
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
+        }
     }
 }

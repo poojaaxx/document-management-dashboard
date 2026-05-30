@@ -27,33 +27,33 @@ public class UploadService {
     // Upload single file
     public Document uploadFile(MultipartFile file) throws IOException {
 
-        // Validate PDF
         if (file.getContentType() == null ||
                 !file.getContentType().equals("application/pdf")) {
-            throw new RuntimeException("Only PDF files are allowed");
+
+            throw new RuntimeException(
+                    "Only PDF files are allowed"
+            );
         }
 
-        // Create uploads folder if missing
         Path uploadPath = Paths.get(UPLOAD_DIR);
 
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
 
-        // Unique filename
         String uniqueFileName =
-                UUID.randomUUID() + "_" + file.getOriginalFilename();
+                UUID.randomUUID() + "_" +
+                        file.getOriginalFilename();
 
-        Path filePath = uploadPath.resolve(uniqueFileName);
+        Path filePath =
+                uploadPath.resolve(uniqueFileName);
 
-        // Save file
         Files.copy(
                 file.getInputStream(),
                 filePath,
                 StandardCopyOption.REPLACE_EXISTING
         );
 
-        // Save metadata
         Document document = Document.builder()
                 .fileName(file.getOriginalFilename())
                 .fileType(file.getContentType())
@@ -66,9 +66,9 @@ public class UploadService {
         Document savedDocument =
                 documentRepository.save(document);
 
-        // Create upload notification
         notificationService.createNotification(
-                "File uploaded: " + file.getOriginalFilename(),
+                "File uploaded: " +
+                        file.getOriginalFilename(),
                 "UPLOAD"
         );
 
@@ -90,11 +90,11 @@ public class UploadService {
             );
         }
 
-        // Create bulk upload notification
         if (files.length > 1) {
 
             notificationService.createNotification(
-                    files.length + " files uploaded successfully",
+                    files.length +
+                            " files uploaded successfully",
                     "BULK_UPLOAD"
             );
         }
@@ -104,6 +104,7 @@ public class UploadService {
 
     // Get all uploaded files
     public List<Document> getAllFiles() {
+
         return documentRepository.findAll();
     }
 
@@ -112,6 +113,36 @@ public class UploadService {
 
         return documentRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("File not found"));
+                        new RuntimeException(
+                                "File not found"
+                        ));
+    }
+
+    // Delete file by ID
+    public void deleteFile(Long id)
+            throws IOException {
+
+        Document document =
+                documentRepository.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "File not found"
+                                ));
+
+        Path filePath =
+                Paths.get(document.getFilePath());
+
+        if (Files.exists(filePath)) {
+
+            Files.delete(filePath);
+        }
+
+        documentRepository.delete(document);
+
+        notificationService.createNotification(
+                "File deleted: " +
+                        document.getFileName(),
+                "DELETE"
+        );
     }
 }
