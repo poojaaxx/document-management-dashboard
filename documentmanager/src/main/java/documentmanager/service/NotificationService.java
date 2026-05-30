@@ -4,43 +4,52 @@ import documentmanager.entity.Notification;
 import documentmanager.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-    public long getUnreadCount() {
 
-    return notificationRepository
-            .countByIsReadFalse();
-}
     private final NotificationRepository notificationRepository;
-    public Notification markAsRead(Long id) {
 
-    Notification notification =
-            notificationRepository.findById(id)
-                    .orElseThrow(() ->
-                            new RuntimeException("Notification not found"));
+    private final List<SseEmitter> emitters =
+            new ArrayList<>();
 
-    notification.setIsRead(true);
+    // SSE Subscription
+   public SseEmitter subscribe() {
 
-    return notificationRepository.save(notification);
-}
-    public void markAllAsRead() {
+    SseEmitter emitter =
+            new SseEmitter(Long.MAX_VALUE);
 
-    List<Notification> notifications =
-            notificationRepository.findAll();
+    emitters.add(emitter);
 
-    for (Notification notification : notifications) {
+    try {
 
-        notification.setIsRead(true);
+        emitter.send(
+                SseEmitter.event()
+                        .name("CONNECTED")
+                        .data("SSE Connected")
+        );
+
+    } catch (Exception e) {
+
+        emitter.complete();
     }
 
-    notificationRepository.saveAll(notifications);
+    emitter.onCompletion(() ->
+            emitters.remove(emitter));
+
+    emitter.onTimeout(() ->
+            emitters.remove(emitter));
+
+    return emitter;
 }
-    // Create notification
+
+    // Create notification + push via SSE
     public Notification createNotification(
             String message,
             String type
@@ -54,11 +63,66 @@ public class NotificationService {
                         .createdAt(LocalDateTime.now())
                         .build();
 
-        return notificationRepository.save(notification);
+        Notification savedNotification =
+                notificationRepository.save(notification);
+
+        for (SseEmitter emitter : emitters) {
+
+            try {
+
+                emitter.send(
+        SseEmitter.event()
+                .name("notification")
+                .data(savedNotification)
+);
+
+            } catch (Exception e) {
+
+                emitter.complete();
+
+                emitters.remove(emitter);
+            }
+        }
+
+        return savedNotification;
     }
 
     // Get all notifications
     public List<Notification> getAllNotifications() {
         return notificationRepository.findAll();
+    }
+
+    // Mark one notification as read
+    public Notification markAsRead(Long id) {
+
+        Notification notification =
+                notificationRepository.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException("Notification not found"));
+
+        notification.setIsRead(true);
+
+        return notificationRepository.save(notification);
+    }
+
+    // Mark all notifications as read
+    public void markAllAsRead() {
+
+        List<Notification> notifications =
+                notificationRepository.findAll();
+
+        for (Notification notification : notifications) {
+
+            notification.setIsRead(true);
+        }
+
+        notificationRepository.saveAll(notifications);
+    }
+
+    // Get unread notification count
+    public long getUnreadCount() {
+
+        return notificationRepository
+                .countByIsReadFalse();
     }
 }
